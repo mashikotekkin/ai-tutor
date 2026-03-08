@@ -6,53 +6,48 @@
   <title>AI学習アシスタント</title>
   <style>
     body {
-      background-color: #fdf6e3; /* 学習に集中しやすい優しいクリーム色 */
+      background-color: #fdf6e3; 
       text-align: center;
-      font-family: 'Hiragino Maru Gothic ProN', sans-serif; /* 丸ゴシックで親しみやすく */
+      font-family: 'Hiragino Maru Gothic ProN', sans-serif; 
       padding: 30px 15px;
       color: #333;
     }
     h1 {
-      font-size: 40px;
+      font-size: 35px;
       color: #ff8c00;
-      margin-bottom: 40px;
+      margin-bottom: 30px;
     }
-    /* ボタンの共通デザイン */
     .action-btn {
-      font-size: 30px;
-      padding: 20px 40px;
+      font-size: 25px;
+      padding: 20px 30px;
       color: white;
       border: none;
-      border-radius: 20px;
+      border-radius: 15px;
       box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-      margin: 15px;
+      margin: 10px;
       display: inline-block;
       cursor: pointer;
     }
-    /* マイクボタン */
-    #mic-btn {
-      background-color: #32cd32; 
-    }
-    /* カメラボタン */
-    #camera-label {
-      background-color: #1e90ff; 
-    }
-    /* 結果表示エリア */
+    #mic-btn { background-color: #32cd32; }
+    #camera-label { background-color: #1e90ff; }
     #result-box {
       background-color: white;
       border-radius: 15px;
-      padding: 30px;
-      margin-top: 40px;
-      font-size: 28px;
+      padding: 25px;
+      margin-top: 30px;
+      font-size: 22px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.05);
       min-height: 100px;
+      text-align: left;
+      line-height: 1.6;
     }
-    /* カメラで撮った写真のプレビュー */
     #image-preview {
-      max-width: 90%;
+      max-width: 80%;
       border-radius: 10px;
-      margin-top: 20px;
-      display: none; /* 最初は隠しておく */
+      margin-top: 15px;
+      display: none;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
@@ -60,15 +55,14 @@
 
   <h1>✨ AI学習アシスタント ✨</h1>
 
-  <label id="camera-label" class="action-btn" for="camera-input">📷 問題を撮影する</label>
+  <label id="camera-label" class="action-btn" for="camera-input">📷 問題を撮る</label>
   <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+  <button id="mic-btn" class="action-btn">🎤 質問する</button>
 
-  <button id="mic-btn" class="action-btn">🎤 音声で質問する</button>
+  <img id="image-preview" src="" alt="撮影した画像">
 
-  <div id="result-box">
-    ここに質問や写真が表示されます💡
-    <br>
-    <img id="image-preview" src="" alt="撮影した画像">
+  <div id="result-box" style="text-align: center;">
+    ここにGeminiの答えが出ます💡<br>まずは問題を撮ってね！
   </div>
 
   <script>
@@ -77,46 +71,89 @@
     const cameraInput = document.getElementById("camera-input");
     const imagePreview = document.getElementById("image-preview");
 
-    // --- ① マイクの処理 ---
+    // ここに以前の正しいAPIキーをセットしています
+    const GEMINI_API_KEY = 'AIzaSyAiCsZMHX_3mqeQyDwJW1KRptzTUDGRFsw';
+
+    let currentImageBase64 = null;
+    let currentMimeType = null;
+
+    // --- ① カメラの処理 ---
+    cameraInput.onchange = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        currentMimeType = file.type;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          imagePreview.src = e.target.result;
+          imagePreview.style.display = "block";
+          // 画像データをGemini用に変換して保存
+          currentImageBase64 = e.target.result.split(',')[1];
+          resultBox.style.textAlign = "center";
+          resultBox.innerHTML = "📸 写真をセットしたよ！<br>「🎤 質問する」を押して聞いてみてね！";
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    // --- ② マイクとGemini通信の処理 ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.lang = "ja-JP";
 
       micBtn.onclick = () => {
-        resultBox.innerHTML = "🗣️ 聞き取っています...<br><img id='image-preview' src='" + imagePreview.src + "' style='max-width: 90%; border-radius: 10px; margin-top: 20px; display: " + imagePreview.style.display + ";'>";
+        resultBox.style.textAlign = "center";
+        resultBox.innerHTML = "🗣️ お話を聞いています...";
         recognition.start();
       };
 
-      recognition.onresult = (event) => {
+      recognition.onresult = async (event) => {
         const text = event.results[0][0].transcript;
-        // 写真が既にある場合は残しつつ、文字を更新
-        resultBox.innerHTML = "「" + text + "」<br>とお話ししましたね！<br><img id='image-preview' src='" + imagePreview.src + "' style='max-width: 90%; border-radius: 10px; margin-top: 20px; display: " + imagePreview.style.display + ";'>";
+        resultBox.style.textAlign = "center";
+        resultBox.innerHTML = "「" + text + "」<br><br>🧠✨ 一生懸命考えているよ...（数秒待ってね）";
+
+        // Geminiに送るデータを準備
+        let parts = [{ "text": text + " (※小学生にもわかりやすく、優しい言葉で教えてください)" }];
+        if (currentImageBase64) {
+          parts.push({
+            "inline_data": {
+              "mime_type": currentMimeType,
+              "data": currentImageBase64
+            }
+          });
+        }
+
+        const data = { "contents": [{ "parts": parts }] };
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+        try {
+          // Geminiの脳みそにアクセス！
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const json = await response.json();
+          
+          if (json.candidates && json.candidates[0].content) {
+            const reply = json.candidates[0].content.parts[0].text;
+            resultBox.style.textAlign = "left";
+            resultBox.innerHTML = "💡 <b>Geminiの答え：</b><br><br>" + reply.replace(/\n/g, '<br>');
+          } else {
+            resultBox.innerHTML = "ごめんなさい、うまく答えられませんでした💦";
+          }
+        } catch (error) {
+          resultBox.innerHTML = "通信エラーが発生しました🔌";
+        }
       };
 
       recognition.onerror = (event) => {
-        resultBox.innerHTML = "うまく聞き取れませんでした（" + event.error + "）<br><img id='image-preview' src='" + imagePreview.src + "' style='max-width: 90%; border-radius: 10px; margin-top: 20px; display: " + imagePreview.style.display + ";'>";
+        resultBox.innerHTML = "うまく聞き取れませんでした（" + event.error + "）";
       };
     } else {
       micBtn.style.display = "none";
       resultBox.innerHTML = "お使いの端末はマイク機能に未対応です。";
     }
-
-    // --- ② カメラの処理 ---
-    cameraInput.onchange = (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        // 選んだ（撮影した）写真を画面に表示する
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          imagePreview.src = e.target.result;
-          imagePreview.style.display = "block";
-          resultBox.innerHTML = "📸 写真をセットしました！<br><img id='image-preview' src='" + imagePreview.src + "' style='max-width: 90%; border-radius: 10px; margin-top: 20px; display: block;'>";
-        };
-        reader.readAsDataURL(file);
-      }
-    };
   </script>
-
 </body>
 </html>
