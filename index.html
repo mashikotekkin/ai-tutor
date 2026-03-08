@@ -62,7 +62,7 @@
   <img id="image-preview" src="" alt="撮影した画像">
 
   <div id="result-box" style="text-align: center;">
-    ここにGeminiの答えが出ます💡<br>まずは問題を撮ってね！
+    ここにジェミニの答えが出ます💡<br>まずは問題を撮ってね！
   </div>
 
   <script>
@@ -71,7 +71,7 @@
     const cameraInput = document.getElementById("camera-input");
     const imagePreview = document.getElementById("image-preview");
 
-    // ここに以前の正しいAPIキーをセットしています
+    // ここにGeminiのAPIキーをセットしています
     const GEMINI_API_KEY = 'AIzaSyAiCsZMHX_3mqeQyDwJW1KRptzTUDGRFsw';
 
     let currentImageBase64 = null;
@@ -113,7 +113,7 @@
         resultBox.innerHTML = "「" + text + "」<br><br>🧠✨ 一生懸命考えているよ...（数秒待ってね）";
 
         // Geminiに送るデータを準備
-        let parts = [{ "text": text + " (※小学生にもわかりやすく、優しい言葉で教えてください)" }];
+        let parts = [{ "text": text + " (※あなたは小学生向けの優しい家庭教師です。小学生にもわかりやすく、優しい言葉で教えてください)" }];
         if (currentImageBase64) {
           parts.push({
             "inline_data": {
@@ -138,7 +138,8 @@
           if (json.candidates && json.candidates[0].content) {
             const reply = json.candidates[0].content.parts[0].text;
             resultBox.style.textAlign = "left";
-            resultBox.innerHTML = "💡 <b>Geminiの答え：</b><br><br>" + reply.replace(/\n/g, '<br>');
+            // 改行をHTMLタグに変換して見やすく表示
+            resultBox.innerHTML = "💡 <b>ジェミニの答え：</b><br><br>" + reply.replace(/\n/g, '<br>');
           } else {
             resultBox.innerHTML = "ごめんなさい、うまく答えられませんでした💦";
           }
