@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI学習アシスタント</title>
+  <style>
+    body {
+      background-color: #fdf6e3; /* 学習に集中しやすい優しいクリーム色 */
+      text-align: center;
+      font-family: 'Hiragino Maru Gothic ProN', sans-serif; /* 丸ゴシックで親しみやすく */
+      padding: 30px 15px;
+      color: #333;
+    }
+    h1 {
+      font-size: 40px;
+      color: #ff8c00;
+      margin-bottom: 40px;
+    }
+    /* ボタンの共通デザイン */
+    .action-btn {
+      font-size: 30px;
+      padding: 20px 40px;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+      margin: 15px;
+      display: inline-block;
+      cursor: pointer;
+    }
+    /* マイクボタン */
+    #mic-btn {
+      background-color: #32cd32; 
+    }
+    /* カメラボタン */
+    #camera-label {
+      background-color: #1e90ff; 
+    }
+    /* 結果表示エリア */
+    #result-box {
+      background-color: white;
+      border-radius: 15px;
+      padding: 30px;
+      margin-top: 40px;
+      font-size: 28px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      min-height: 100px;
+    }
+    /* カメラで撮った写真のプレビュー */
+    #image-preview {
+      max-width: 90%;
+      border-radius: 10px;
+      margin-top: 20px;
+      display: none; /* 最初は隠しておく */
+    }
+  </style>
+</head>
+<body>
+
+  <h1>✨ AI学習アシスタント ✨</h1>
+
+  <label id="camera-label" class="action-btn" for="camera-input">📷 問題を撮影する</label>
+  <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+
+  <button id="mic-btn" class="action-btn">🎤 音声で質問する</button>
+
+  <div id="result-box">
+    ここに質問や写真が表示されます💡
+    <br>
+    <img id="image-preview" src="" alt="撮影した画像">
+  </div>
+
+  <script>
+    const micBtn = document.getElementById("mic-btn");
+    const resultBox = document.getElementById("result-box");
+    const cameraInput = document.getElementById("camera-input");
+    const imagePreview = document.getElementById("image-preview");
+
+    // --- ① マイクの処理 ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "ja-JP";
+
+      micBtn.onclick = () => {
+        resultBox.innerHTML = "🗣️ 聞き取っています...<br><img id='image-preview' src='" + imagePreview.src + "' style='max-width: 90%; border-radius: 10px; margin-top: 20px; display: " + imagePreview.style.display + ";'>";
+        recognition.start();
+      };
+
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        // 写真が既にある場合は残しつつ、文字を更新
+        resultBox.innerHTML = "「" + text + "」<br>とお話ししましたね！<br><img id='image-preview' src='" + imagePreview.src + "' style='max-width: 90%; border-radius: 10px; margin-top: 20px; display: " + imagePreview.style.display + ";'>";
+      };
+
+      recognition.onerror = (event) => {
+        resultBox.innerHTML = "うまく聞き取れませんでした（" + event.error + "）<br><img id='image-preview' src='" + imagePreview.src + "' style='max-width: 90%; border-radius: 10px; margin-top: 20px; display: " + imagePreview.style.display + ";'>";
+      };
+    } else {
+      micBtn.style.display = "none";
+      resultBox.innerHTML = "お使いの端末はマイク機能に未対応です。";
+    }
+
+    // --- ② カメラの処理 ---
+    cameraInput.onchange = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        // 選んだ（撮影した）写真を画面に表示する
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          imagePreview.src = e.target.result;
+          imagePreview.style.display = "block";
+          resultBox.innerHTML = "📸 写真をセットしました！<br><img id='image-preview' src='" + imagePreview.src + "' style='max-width: 90%; border-radius: 10px; margin-top: 20px; display: block;'>";
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+  </script>
+
+</body>
+</html>
