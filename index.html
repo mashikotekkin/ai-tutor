@@ -6,11 +6,9 @@
   <title>AI学習アシスタント</title>
   <style>
     body {
-      background-color: #fdf6e3; 
-      text-align: center;
+      background-color: #fdf6e3; text-align: center;
       font-family: 'Hiragino Maru Gothic ProN', sans-serif; 
-      padding: 30px 15px;
-      color: #333;
+      padding: 30px 15px; color: #333;
     }
     h1 { font-size: 35px; color: #ff8c00; margin-bottom: 30px; }
     .action-btn {
@@ -21,16 +19,13 @@
     #camera-label { background-color: #1e90ff; display: inline-block; }
     #result-box {
       background-color: white; border-radius: 15px; padding: 25px; margin-top: 30px;
-      font-size: 22px; min-height: 100px; line-height: 1.6;
+      font-size: 22px; min-height: 100px; text-align: left; line-height: 1.6;
     }
-    /* 追加：初期設定画面のデザイン */
     #setup-screen {
       background: white; padding: 30px; border-radius: 15px; margin-top: 20px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
-    #key-input {
-      font-size: 18px; padding: 15px; width: 80%; border-radius: 10px; border: 1px solid #ccc; margin-bottom: 20px;
-    }
+    #key-input { font-size: 18px; padding: 15px; width: 80%; border-radius: 10px; border: 1px solid #ccc; margin-bottom: 20px; }
   </style>
 </head>
 <body>
@@ -39,9 +34,9 @@
 
   <div id="setup-screen">
     <h3>【大人用】最初の設定</h3>
-    <p style="font-size: 18px;">新しく取得したGeminiのAPIキーを貼り付けてください。<br><span style="font-size: 14px; color: gray;">（このiPadの中だけに安全に保存されるため、外部に漏れることはありません）</span></p>
+    <p>GeminiのAPIキーを入力してください。</p>
     <input type="password" id="key-input" placeholder="AIzaSy..."><br>
-    <button id="save-key-btn" class="action-btn" style="background-color: #ff8c00; padding: 15px 25px; font-size: 20px;">保存してスタート</button>
+    <button id="save-key-btn" class="action-btn" style="background-color: #ff8c00;">保存してスタート</button>
   </div>
 
   <div id="main-app" style="display: none;">
@@ -51,9 +46,7 @@
 
     <img id="image-preview" src="" style="max-width: 80%; border-radius: 10px; margin: 15px auto; display: none;">
 
-    <div id="result-box" style="text-align: center;">
-      ここにジェミニの答えが出ます💡<br>まずは問題を撮ってね！
-    </div>
+    <div id="result-box" style="text-align: center;">ここにジェミニの答えが出ます💡</div>
     
     <button id="reset-key-btn" style="margin-top: 40px; font-size: 14px; color: gray; background: none; border: none; text-decoration: underline; cursor: pointer;">APIキーを再設定する</button>
   </div>
@@ -64,7 +57,6 @@
     const keyInput = document.getElementById('key-input');
     const saveKeyBtn = document.getElementById('save-key-btn');
     const resetKeyBtn = document.getElementById('reset-key-btn');
-
     const micBtn = document.getElementById("mic-btn");
     const resultBox = document.getElementById("result-box");
     const cameraInput = document.getElementById("camera-input");
@@ -73,34 +65,23 @@
     let currentImageBase64 = null;
     let currentMimeType = null;
 
-    // --- APIキーの記憶システム ---
     function checkApiKey() {
-      const savedKey = localStorage.getItem('gemini_api_key');
-      if (savedKey) {
-        setupScreen.style.display = 'none';
-        mainApp.style.display = 'block';
+      if (localStorage.getItem('gemini_api_key')) {
+        setupScreen.style.display = 'none'; mainApp.style.display = 'block';
       } else {
-        setupScreen.style.display = 'block';
-        mainApp.style.display = 'none';
+        setupScreen.style.display = 'block'; mainApp.style.display = 'none';
       }
     }
-    // 画面を開いた時にチェック
     checkApiKey();
 
     saveKeyBtn.onclick = () => {
       const key = keyInput.value.trim();
-      if (key) {
-        localStorage.setItem('gemini_api_key', key);
-        checkApiKey();
-      }
+      if (key) { localStorage.setItem('gemini_api_key', key); checkApiKey(); }
     };
 
-    resetKeyBtn.onclick = () => {
-      localStorage.removeItem('gemini_api_key');
-      checkApiKey();
-    };
+    resetKeyBtn.onclick = () => { localStorage.removeItem('gemini_api_key'); checkApiKey(); };
 
-    // --- カメラの処理（画像を軽くする機能付き） ---
+    // --- ① 画質を綺麗に保つように修正（800px → 1600px） ---
     cameraInput.onchange = (event) => {
       const file = event.target.files[0];
       if (file) {
@@ -110,7 +91,7 @@
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_SIZE = 800;
+            const MAX_SIZE = 1600; // ここを大きくして視力を上げました！
             let width = img.width; let height = img.height;
             if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
             else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
@@ -119,8 +100,7 @@
             ctx.drawImage(img, 0, 0, width, height);
             
             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            imagePreview.src = dataUrl;
-            imagePreview.style.display = "block";
+            imagePreview.src = dataUrl; imagePreview.style.display = "block";
             currentImageBase64 = dataUrl.split(',')[1];
             
             resultBox.style.textAlign = "center";
@@ -132,7 +112,6 @@
       }
     };
 
-    // --- マイクとGemini通信の処理 ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
@@ -149,15 +128,26 @@
         resultBox.style.textAlign = "center";
         resultBox.innerHTML = "「" + text + "」<br><br>🧠✨ 一生懸命考えているよ...（数秒待ってね）";
 
-        // 保存してあるAPIキーを呼び出す
         const apiKey = localStorage.getItem('gemini_api_key');
         
-        let parts = [{ "text": text + " (※あなたは小学生向けの優しい家庭教師です。画像の内容を踏まえて、小学生にもわかりやすく、優しい言葉で教えてください。)" }];
+        // --- ② プロンプト（指示）を厳格で賢いものに大幅修正 ---
+        const systemPrompt = `
+【絶対のルール】
+1. 画像に書かれていない問題文や文章を勝手に作り出さないこと（ハルシネーションの厳禁）。
+2. 画像内の文字（印刷された問題文と、子供が書いた手書きの漢字）を正確に読み取ること。
+3. ユーザーの質問に対し、画像に該当する箇所を探して答えること。
+4. 誤字脱字、間違った漢字（例：「交通」の「通」を「同」と書いているなど）があれば、「惜しい！漢字が少し違うよ」と優しく的確に指摘すること。
+
+あなたは小学生の勉強をサポートする、優しくて賢い家庭教師です。
+ユーザーからの質問：「${text}」
+この質問に対し、画像の内容をしっかり確認した上で、小学生にわかりやすい言葉（ひらがな多め）で答えてください。
+        `;
+
+        let parts = [{ "text": systemPrompt }];
         if (currentImageBase64) {
           parts.push({ "inline_data": { "mime_type": currentMimeType, "data": currentImageBase64 } });
         }
 
-        // ※最新の 2.5 バージョンを指定しています
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
         try {
@@ -181,13 +171,9 @@
           resultBox.innerHTML = "通信エラーが発生しました🔌";
         }
       };
-
-      recognition.onerror = (event) => {
-        resultBox.innerHTML = "うまく聞き取れませんでした（" + event.error + "）";
-      };
+      recognition.onerror = (event) => { resultBox.innerHTML = "うまく聞き取れませんでした（" + event.error + "）"; };
     } else {
-      micBtn.style.display = "none";
-      resultBox.innerHTML = "お使いの端末はマイク機能に未対応です。";
+      micBtn.style.display = "none"; resultBox.innerHTML = "お使いの端末はマイク機能に未対応です。";
     }
   </script>
 </body>
