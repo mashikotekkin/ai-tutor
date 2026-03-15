@@ -10,10 +10,13 @@
       font-family: 'Hiragino Maru Gothic ProN', sans-serif; 
       padding: 30px 15px; color: #333;
     }
-    h1 { font-size: 35px; color: #ff8c00; margin-bottom: 30px; }
+    h1 { font-size: 35px; color: #ff8c00; margin-bottom: 20px; }
     .action-btn {
-      font-size: 25px; padding: 20px 30px; color: white; border: none;
+      font-size: 20px; padding: 15px 25px; color: white; border: none;
       border-radius: 15px; box-shadow: 0 8px 15px rgba(0,0,0,0.1); margin: 10px; cursor: pointer;
+    }
+    #grade-select {
+      background-color: #ffd700; color: #333; font-weight: bold; font-size: 20px;
     }
     #mic-btn { background-color: #32cd32; }
     #camera-label { background-color: #1e90ff; display: inline-block; }
@@ -40,6 +43,12 @@
   </div>
 
   <div id="main-app" style="display: none;">
+    <select id="grade-select" class="action-btn">
+      <option value="小学4年生">🎒 小学4年生</option>
+      <option value="小学2年生" selected>🎒 小学2年生</option>
+    </select>
+    <br>
+
     <label id="camera-label" class="action-btn" for="camera-input">📷 問題を撮る</label>
     <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
     <button id="mic-btn" class="action-btn">🎤 質問する</button>
@@ -57,6 +66,7 @@
     const keyInput = document.getElementById('key-input');
     const saveKeyBtn = document.getElementById('save-key-btn');
     const resetKeyBtn = document.getElementById('reset-key-btn');
+    const gradeSelect = document.getElementById('grade-select');
     const micBtn = document.getElementById("mic-btn");
     const resultBox = document.getElementById("result-box");
     const cameraInput = document.getElementById("camera-input");
@@ -127,15 +137,17 @@
         resultBox.innerHTML = "「" + text + "」<br><br>🧠✨ 一生懸命考えているよ...（数秒待ってね）";
 
         const apiKey = localStorage.getItem('gemini_api_key');
+        const selectedGrade = gradeSelect.value;
         
-        // ★ここを改良！AIの脳の根底に「絶対ルール」を叩き込みます★
+        // ★ユーザー様のアイデアを組み込んだ最強のルール★
         const systemInstruction = `
 【絶対に守るべき厳格なルール】
-1. あなたは小学生向けの優しい家庭教師ですが、絶対にウソや適当なこと（ハルシネーション）を言ってはいけません。
-2. ユーザーの質問で「〇番」と問題が指定されていない場合は、勝手に問題を解いたり丸付けを作文しないでください。「どの問題かな？マイクで番号を教えてね！」と聞き返してください。
-3. 画像の文字（印刷文字や手書き文字）がハッキリ読めない場合は、勝手に想像せず「文字が少し見えにくいから、問題に近づいてもう一度写真を撮ってね📸」と答えてください。
-4. 質問された問題についてのみ答えること。他の問題には触れないこと。
-5. 手書きの漢字が間違っている場合は、いきなり正解を言うのではなく、「〇〇という漢字の右側が少し違うみたい。確認してみよう！」のように優しいヒントを出してください。
+1. 相手は「${selectedGrade}」です。${selectedGrade}で習う漢字や言葉のレベルに合わせて、優しく教えてください。
+2. 回答の最初は必ず「『（あなたが画像から読み取った問題文）』という問題だね？合っているかな？」と、自分の読み取りが正しいか子供に確認してください。
+3. 画像の文字を読むときは、絶対に勝手に想像して別の漢字（翼や飛など）を補わないでください。
+4. 文字がぼやけていて自信がない部分がある場合は、「〇〇の部分がちょっと読めなかったんだけど、何て書いてあるかな？」と正直に聞いてください。
+5. 子供が書いた答えが合っている場合は、たくさん褒めてあげてください。
+6. 間違っている箇所があれば、いきなり答えを言うのではなく「〇〇の漢字の形、もう一回確認してみようか！」とヒントを出してください。
 `;
 
         let parts = [{ "text": text }];
@@ -143,7 +155,6 @@
           parts.push({ "inline_data": { "mime_type": currentMimeType, "data": currentImageBase64 } });
         }
 
-        // System Instruction（絶対ルール）を分離して送信する安全な形式に変更
         const data = {
           "system_instruction": { "parts": [{ "text": systemInstruction }] },
           "contents": [{ "parts": parts }]
