@@ -12,42 +12,24 @@
       padding: 30px 15px;
       color: #333;
     }
-    h1 {
-      font-size: 35px;
-      color: #ff8c00;
-      margin-bottom: 30px;
-    }
+    h1 { font-size: 35px; color: #ff8c00; margin-bottom: 30px; }
     .action-btn {
-      font-size: 25px;
-      padding: 20px 30px;
-      color: white;
-      border: none;
-      border-radius: 15px;
-      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-      margin: 10px;
-      display: inline-block;
-      cursor: pointer;
+      font-size: 25px; padding: 20px 30px; color: white; border: none;
+      border-radius: 15px; box-shadow: 0 8px 15px rgba(0,0,0,0.1); margin: 10px; cursor: pointer;
     }
     #mic-btn { background-color: #32cd32; }
-    #camera-label { background-color: #1e90ff; }
+    #camera-label { background-color: #1e90ff; display: inline-block; }
     #result-box {
-      background-color: white;
-      border-radius: 15px;
-      padding: 25px;
-      margin-top: 30px;
-      font-size: 22px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-      min-height: 100px;
-      text-align: left;
-      line-height: 1.6;
+      background-color: white; border-radius: 15px; padding: 25px; margin-top: 30px;
+      font-size: 22px; min-height: 100px; line-height: 1.6;
     }
-    #image-preview {
-      max-width: 80%;
-      border-radius: 10px;
-      margin-top: 15px;
-      display: none;
-      margin-left: auto;
-      margin-right: auto;
+    /* 追加：初期設定画面のデザイン */
+    #setup-screen {
+      background: white; padding: 30px; border-radius: 15px; margin-top: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    #key-input {
+      font-size: 18px; padding: 15px; width: 80%; border-radius: 10px; border: 1px solid #ccc; margin-bottom: 20px;
     }
   </style>
 </head>
@@ -55,65 +37,90 @@
 
   <h1>✨ AI学習アシスタント ✨</h1>
 
-  <label id="camera-label" class="action-btn" for="camera-input">📷 問題を撮る</label>
-  <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
-  <button id="mic-btn" class="action-btn">🎤 質問する</button>
+  <div id="setup-screen">
+    <h3>【大人用】最初の設定</h3>
+    <p style="font-size: 18px;">新しく取得したGeminiのAPIキーを貼り付けてください。<br><span style="font-size: 14px; color: gray;">（このiPadの中だけに安全に保存されるため、外部に漏れることはありません）</span></p>
+    <input type="password" id="key-input" placeholder="AIzaSy..."><br>
+    <button id="save-key-btn" class="action-btn" style="background-color: #ff8c00; padding: 15px 25px; font-size: 20px;">保存してスタート</button>
+  </div>
 
-  <img id="image-preview" src="" alt="撮影した画像">
+  <div id="main-app" style="display: none;">
+    <label id="camera-label" class="action-btn" for="camera-input">📷 問題を撮る</label>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+    <button id="mic-btn" class="action-btn">🎤 質問する</button>
 
-  <div id="result-box" style="text-align: center;">
-    ここにジェミニの答えが出ます💡<br>まずは問題を撮ってね！
+    <img id="image-preview" src="" style="max-width: 80%; border-radius: 10px; margin: 15px auto; display: none;">
+
+    <div id="result-box" style="text-align: center;">
+      ここにジェミニの答えが出ます💡<br>まずは問題を撮ってね！
+    </div>
+    
+    <button id="reset-key-btn" style="margin-top: 40px; font-size: 14px; color: gray; background: none; border: none; text-decoration: underline; cursor: pointer;">APIキーを再設定する</button>
   </div>
 
   <script>
+    const setupScreen = document.getElementById('setup-screen');
+    const mainApp = document.getElementById('main-app');
+    const keyInput = document.getElementById('key-input');
+    const saveKeyBtn = document.getElementById('save-key-btn');
+    const resetKeyBtn = document.getElementById('reset-key-btn');
+
     const micBtn = document.getElementById("mic-btn");
     const resultBox = document.getElementById("result-box");
     const cameraInput = document.getElementById("camera-input");
     const imagePreview = document.getElementById("image-preview");
 
-    // GeminiのAPIキー
-    const GEMINI_API_KEY = 'AIzaSyAiCsZMHX_3mqeQyDwJW1KRptzTUDGRFsw';
-
     let currentImageBase64 = null;
     let currentMimeType = null;
 
-    // --- ① カメラの処理（画像を軽くする魔法付き） ---
+    // --- APIキーの記憶システム ---
+    function checkApiKey() {
+      const savedKey = localStorage.getItem('gemini_api_key');
+      if (savedKey) {
+        setupScreen.style.display = 'none';
+        mainApp.style.display = 'block';
+      } else {
+        setupScreen.style.display = 'block';
+        mainApp.style.display = 'none';
+      }
+    }
+    // 画面を開いた時にチェック
+    checkApiKey();
+
+    saveKeyBtn.onclick = () => {
+      const key = keyInput.value.trim();
+      if (key) {
+        localStorage.setItem('gemini_api_key', key);
+        checkApiKey();
+      }
+    };
+
+    resetKeyBtn.onclick = () => {
+      localStorage.removeItem('gemini_api_key');
+      checkApiKey();
+    };
+
+    // --- カメラの処理（画像を軽くする機能付き） ---
     cameraInput.onchange = (event) => {
       const file = event.target.files[0];
       if (file) {
-        currentMimeType = "image/jpeg"; // 安定のJPEGに統一
+        currentMimeType = "image/jpeg";
         const reader = new FileReader();
-        
         reader.onload = (e) => {
           const img = new Image();
           img.onload = () => {
-            // 画像サイズを最大800pxに縮小する処理
             const canvas = document.createElement('canvas');
             const MAX_SIZE = 800;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > MAX_SIZE) {
-                height *= MAX_SIZE / width;
-                width = MAX_SIZE;
-              }
-            } else {
-              if (height > MAX_SIZE) {
-                width *= MAX_SIZE / height;
-                height = MAX_SIZE;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
+            let width = img.width; let height = img.height;
+            if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
+            else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
+            canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-
-            // 軽くした画像を保存
+            
             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
             imagePreview.src = dataUrl;
             imagePreview.style.display = "block";
-            
             currentImageBase64 = dataUrl.split(',')[1];
             
             resultBox.style.textAlign = "center";
@@ -125,7 +132,7 @@
       }
     };
 
-    // --- ② マイクとGemini通信の処理 ---
+    // --- マイクとGemini通信の処理 ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
@@ -142,26 +149,22 @@
         resultBox.style.textAlign = "center";
         resultBox.innerHTML = "「" + text + "」<br><br>🧠✨ 一生懸命考えているよ...（数秒待ってね）";
 
-        // Geminiに送るデータを準備
+        // 保存してあるAPIキーを呼び出す
+        const apiKey = localStorage.getItem('gemini_api_key');
+        
         let parts = [{ "text": text + " (※あなたは小学生向けの優しい家庭教師です。画像の内容を踏まえて、小学生にもわかりやすく、優しい言葉で教えてください。)" }];
         if (currentImageBase64) {
-          parts.push({
-            "inline_data": {
-              "mime_type": currentMimeType,
-              "data": currentImageBase64
-            }
-          });
+          parts.push({ "inline_data": { "mime_type": currentMimeType, "data": currentImageBase64 } });
         }
 
-        const data = { "contents": [{ "parts": parts }] };
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        // ※最新の 2.5 バージョンを指定しています
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
         try {
-          // Geminiの脳みそにアクセス！
           const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ "contents": [{ "parts": parts }] })
           });
           const json = await response.json();
           
@@ -170,7 +173,6 @@
             resultBox.style.textAlign = "left";
             resultBox.innerHTML = "💡 <b>ジェミニの答え：</b><br><br>" + reply.replace(/\n/g, '<br>');
           } else if (json.error) {
-            // エラーの理由を画面に出すようにしました
             resultBox.innerHTML = "ごめんなさい、エラーになっちゃった💦<br>理由：" + json.error.message;
           } else {
             resultBox.innerHTML = "ごめんなさい、うまく答えられませんでした💦";
